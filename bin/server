@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "dotenv"
+
+# Load .env.local overrides first, then .env defaults
+root = File.expand_path("..", __dir__)
+Dotenv.load(File.join(root, ".env.local"), File.join(root, ".env"))
+
+require "zeitwerk"
+require "json"
+require "net/http"
+require "uri"
+
+$LOAD_PATH.unshift File.join(root, "lib")
+
+loader = Zeitwerk::Loader.new
+loader.inflector.inflect("lunchmoney_mcp" => "LunchMoneyMcp")
+loader.push_dir(File.join(root, "lib"))
+loader.setup
+loader.eager_load
+
+api_token = ENV["LUNCHMONEY_API_TOKEN"]
+if api_token.nil? || api_token.empty? || api_token == "your_token_here"
+  abort "ERROR: LUNCHMONEY_API_TOKEN is not set. Add it to .env.local"
+end
+
+client = LunchMoneyMcp::Client.new(api_token)
+server = LunchMoneyMcp::Server.new(client)
+
+LunchMoneyMcp::Tools::User.register(server)
+LunchMoneyMcp::Tools::Categories.register(server)
+LunchMoneyMcp::Tools::Transactions.register(server)
+LunchMoneyMcp::Tools::ManualAccounts.register(server)
+LunchMoneyMcp::Tools::PlaidAccounts.register(server)
+LunchMoneyMcp::Tools::Tags.register(server)
+LunchMoneyMcp::Tools::RecurringItems.register(server)
+LunchMoneyMcp::Tools::Summary.register(server)
+
+server.run

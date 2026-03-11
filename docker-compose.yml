@@ -1,0 +1,10 @@
+services:
+  mcp:
+    build: .
+    stdin_open: true
+    tty: false
+    environment:
+      - LUNCHMONEY_API_TOKEN=${LUNCHMONEY_API_TOKEN}
+      - LUNCHMONEY_API_BASE_URL=${LUNCHMONEY_API_BASE_URL:-https://dev.lunchmoney.app/v2}
+    # Override .env values at runtime via environment or a .env.local file:
+    #   LUNCHMONEY_API_TOKEN=xxx docker compose up
