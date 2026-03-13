@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone SDK dependency
+        run: git clone https://github.com/ajaya/lunchmoney-sdk-ruby.git ../lunchmoney-sdk-ruby
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Build gem
+        run: gem build lunchmoney-ruby.gemspec
+
+      - name: Publish to RubyGems
+        run: gem push lunchmoney-ruby-*.gem
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.GEM_HOST_API_KEY }}

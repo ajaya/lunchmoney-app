@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+root = File.expand_path("..", __dir__)
+ENV["BUNDLE_GEMFILE"] ||= File.join(root, "Gemfile")
+
+require "bundler/setup"
+require "dotenv"
+Dotenv.load(File.join(root, ".env.local"), File.join(root, ".env"))
+
+require "zeitwerk"
+require "json"
+require "thor"
+require "sequel"
+require "lunchmoney-sdk-ruby"
+
+# Sequel models need a DB with tables at class-definition time; Cache.new replaces it later.
+db = Sequel.sqlite
+%i[transactions categories tags plaid_accounts manual_accounts recurring_items budgets users].each do |t|
+  db.create_table?(t) do
+    Integer :id, primary_key: true
+    column :data, :text, null: false
+    DateTime :synced_at, null: false
+  end
+end
+Sequel::Model.db = db
+
+$LOAD_PATH.unshift File.join(root, "lib")
+
+loader = Zeitwerk::Loader.new
+loader.inflector.inflect("lunchmoney_app" => "LunchMoneyApp")
+loader.push_dir(File.join(root, "lib"))
+loader.setup
+loader.eager_load
+
+LunchMoneyApp::Cli::Main.start(ARGV)

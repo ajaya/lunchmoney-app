@@ -9,31 +9,55 @@ Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 require "zeitwerk"
 require "json"
-require "net/http"
-require "uri"
+require "sequel"
+require "lunchmoney-sdk-ruby"
+
+# Sequel models need a DB with tables at class-definition time; Cache.new replaces it later.
+db = Sequel.sqlite
+%i[transactions categories tags plaid_accounts manual_accounts recurring_items budgets users].each do |t|
+  db.create_table?(t) do
+    Integer :id, primary_key: true
+    column :data, :text, null: false
+    DateTime :synced_at, null: false
+  end
+end
+Sequel::Model.db = db
 
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 
 loader = Zeitwerk::Loader.new
-loader.inflector.inflect("lunchmoney_mcp" => "LunchMoneyMcp")
+loader.inflector.inflect("lunchmoney_app" => "LunchMoneyApp")
 loader.push_dir(File.expand_path("../lib", __dir__))
 loader.setup
 loader.eager_load
 
 module TestHelpers
-  # Returns a server with a stub client, and the stub client itself.
+  # Creates an in-memory cache (reconnects Sequel models) and returns an MCP::Server.
   def build_server
-    client = mock("client")
-    server = LunchMoneyMcp::Server.new(client)
-    [server, client]
+    LunchMoneyApp::Cache.new(":memory:")
+    MCP::Server.new(name: "test", version: "0.0.1")
   end
 
-  # Registers the given tool class and calls a named tool with args.
-  def call(tool_class, tool_name, args = {}, client: nil)
-    c = client || mock("client")
-    s = LunchMoneyMcp::Server.new(c)
-    tool_class.register(s)
-    s.call_tool(tool_name, args)
+  # Call an MCP tool via the server's handle method (JSON-RPC).
+  # Returns the result hash (e.g. {content: [...], isError: false}).
+  def call_tool(server, name, arguments = {})
+    request = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: name, arguments: arguments }
+    }
+    response = server.handle(request)
+    response[:result]
+  end
+
+  def capture_stdout
+    old_stdout = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = old_stdout
   end
 end
 

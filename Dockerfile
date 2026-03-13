@@ -1,4 +1,4 @@
-FROM ruby:4.0.1-slim
+FROM ruby:3.4.8-slim
 
 WORKDIR /app
 
@@ -8,15 +8,16 @@ RUN apt-get update -qq && \
     rm -rf /var/lib/apt/lists/*
 
 # Install gems
-COPY Gemfile Gemfile.lock* ./
-RUN bundle install --without development test
+COPY Gemfile Gemfile.lock* lunchmoney-ruby.gemspec ./
+COPY lib/lunchmoney_app.rb lib/lunchmoney_app.rb
+RUN bundle config set --local without 'development test' && bundle install
 
 # Copy application code
 COPY bin/ bin/
 COPY lib/ lib/
 COPY .env .env
 
-RUN chmod +x bin/server
+RUN chmod +x bin/lunchmoney
 
 # MCP servers communicate via stdio — no port needed
-CMD ["ruby", "bin/server"]
+CMD ["ruby", "bin/lunchmoney", "server"]
