@@ -8,7 +8,6 @@ require "bundler/setup"
 require "dotenv"
 Dotenv.load(File.join(root, ".env.local"), File.join(root, ".env"))
 
-require "zeitwerk"
 require "json"
 require "thor"
 require "sequel"
@@ -26,11 +25,8 @@ end
 Sequel::Model.db = db
 
 $LOAD_PATH.unshift File.join(root, "lib")
+require "lunchmoney_app"
+LunchMoneyApp.eager_load!
 
-loader = Zeitwerk::Loader.new
-loader.inflector.inflect("lunchmoney_app" => "LunchMoneyApp")
-loader.push_dir(File.join(root, "lib"))
-loader.setup
-loader.eager_load
-
+$0 = "lunchmoney"
 LunchMoneyApp::Cli::Main.start(ARGV)

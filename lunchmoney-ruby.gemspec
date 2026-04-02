@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.description   = "A Model Context Protocol server and Thor CLI for the Lunch Money personal finance API."
   spec.homepage      = "https://github.com/ajaya/lunchmoney-ruby"
   spec.license       = "MIT"
-  spec.required_ruby_version = ">= 3.4"
+  spec.required_ruby_version = ">= 3.3"
 
   spec.metadata = {
     "homepage_uri"    => spec.homepage,
@@ -30,6 +30,9 @@ Gem::Specification.new do |spec|
   spec.add_dependency "sqlite3",  "~> 2.6"
   spec.add_dependency "terminal-table", "~> 3.0"
   spec.add_dependency "tty-pager",      "~> 0.14"
+  spec.add_dependency "rack",    "~> 3.1"
+  spec.add_dependency "rackup",  "~> 2.2"
+  spec.add_dependency "webrick", "~> 1.9"
   spec.add_dependency "mcp",    ">= 0.8.0"
   spec.add_dependency "lunchmoney-sdk-ruby"
 

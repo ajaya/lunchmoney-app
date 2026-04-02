@@ -8,7 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bundle install          # Install dependencies
 bundle exec rake test   # Run all tests
 bundle exec ruby bin/lunchmoney help    # Run the CLI
-bundle exec ruby bin/lunchmoney server  # Start the MCP server (requires LUNCHMONEY_API_TOKEN)
+bundle exec ruby bin/lunchmoney server              # Start MCP server (stdio, requires LUNCHMONEY_API_TOKEN)
+bundle exec ruby bin/lunchmoney server --http       # Start MCP server (HTTP on port 9292)
+bundle exec ruby bin/lunchmoney server --http --port 8080  # Custom HTTP port
 
 # Run a single test file
 bundle exec ruby -Ilib -Itest test/tools/transactions_test.rb
@@ -45,14 +47,14 @@ SDK:               lunchmoney-sdk-ruby (LunchMoney::*Api classes) → Lunch Mone
 
 **Shared backend** (`LunchMoneyApp::Api::*` classes) — contains all business logic. Both MCP tool handlers and CLI commands delegate to `Api::*` classes which call SDK API classes (`LunchMoney::TransactionsApi`, etc.). When adding new operations, add the method to the `Api` class first, then wire it into both MCP and CLI.
 
-**Zeitwerk note:** The module is `LunchMoneyApp` but the root file is `lunchmoney_app.rb`. Zeitwerk cannot infer this capitalization, so `bin/lunchmoney` and `test/test_helper.rb` register a custom inflection: `loader.inflector.inflect("lunchmoney_app" => "LunchMoneyApp")`.
+**Zeitwerk note:** The module is `LunchMoneyApp` but the root file is `lunchmoney_app.rb`. Zeitwerk cannot infer this capitalization, so `lib/lunchmoney_app.rb` registers a custom inflection: `loader.inflector.inflect("lunchmoney_app" => "LunchMoneyApp")`. The loader is centralized in the root module — entry points call `LunchMoneyApp.eager_load!` after Sequel DB setup.
 
 **Key files:**
 
 | File | Role |
 |------|------|
 | `bin/lunchmoney` | CLI entry point: loads env, starts Thor (`lunchmoney server` starts the MCP server) |
-| `lib/lunchmoney_app.rb` | Root namespace + `LunchMoneyApp::VERSION` |
+| `lib/lunchmoney_app.rb` | Root namespace, Zeitwerk loader, `LunchMoneyApp::VERSION` |
 | `lib/lunchmoney_app/cli/base.rb` | Thor base class (`exit_on_failure? = true`) |
 | `lib/lunchmoney_app/cli/main.rb` | Thor CLI root: login/logout/server + subcommands |
 | `lib/lunchmoney_app/cli/output.rb` | CLI output helper: serialization, resolve, JSON/human routing, pagination (`terminal-table` + `tty-pager`) |
@@ -78,7 +80,7 @@ end
 
 **Serialization** — `LunchMoneyApp::Tool.serialize` converts SDK model objects to plain hashes with **string keys**. This is used by both MCP tool handlers (via `text_response`) and CLI output formatting.
 
-**MCP server** — uses the official `mcp` gem (`modelcontextprotocol/ruby-sdk`). `LunchMoneyApp::Server.build` creates an `MCP::Server` with all tools. `LunchMoneyApp::Server.run` starts the stdio transport. The `LunchMoneyApp::Tool` base class provides a `.tool` DSL that internally creates `MCP::Tool.define` instances.
+**MCP server** — uses the official `mcp` gem (`modelcontextprotocol/ruby-sdk`). `LunchMoneyApp::Server.build` creates an `MCP::Server` with all tools. `LunchMoneyApp::Server.run` supports two transports: **stdio** (default, JSON-RPC over stdin/stdout) and **HTTP** (`--http` flag, StreamableHTTPTransport via Rack/WEBrick on `/mcp`). The `LunchMoneyApp::Tool` base class provides a `.tool` DSL that internally creates `MCP::Tool.define` instances.
 
 **CLI output** — all CLI commands use `Cli::Output` for rendering. It handles serialization, optional `--resolve` expansion, JSON vs human-readable routing, and pagination via `tty-pager` (when stdout is a TTY). Human-readable output uses `terminal-table` for tabular data. All commands support `--json` for agent-friendly output. Transaction list defaults to last 30 days, sorted by date descending. Use `::Terminal::Table` (root scope) inside Thor subclasses to avoid collision with `Thor::Shell::Terminal`.
 

@@ -7,12 +7,15 @@ module LunchMoneyApp
     class Server < Base
       default_command :start
 
-      desc "start", "Start the MCP server (JSON-RPC over stdio)"
+      desc "start", "Start the MCP server (stdio by default, --http for HTTP)"
+      method_option :http, type: :boolean, default: false, desc: "Listen on HTTP instead of stdio"
+      method_option :port, type: :numeric, default: LunchMoneyApp::Server::DEFAULT_HTTP_PORT,
+        desc: "HTTP port (default: #{LunchMoneyApp::Server::DEFAULT_HTTP_PORT})"
       def start
         LunchMoneyApp::Cli::Main.setup_from_config!(
           log_level: parent_options&.[](:log_level) || options[:log_level]
         )
-        LunchMoneyApp::Server.run
+        LunchMoneyApp::Server.run(http: options[:http], port: options[:port])
       end
 
       desc "config", "Print MCP configuration snippets for Claude"

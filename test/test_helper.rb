@@ -7,7 +7,6 @@ require "webmock/minitest"
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
-require "zeitwerk"
 require "json"
 require "sequel"
 require "lunchmoney-sdk-ruby"
@@ -24,12 +23,8 @@ end
 Sequel::Model.db = db
 
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
-
-loader = Zeitwerk::Loader.new
-loader.inflector.inflect("lunchmoney_app" => "LunchMoneyApp")
-loader.push_dir(File.expand_path("../lib", __dir__))
-loader.setup
-loader.eager_load
+require "lunchmoney_app"
+LunchMoneyApp.eager_load!
 
 module TestHelpers
   # Creates an in-memory cache (reconnects Sequel models) and returns an MCP::Server.
